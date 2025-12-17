@@ -1,0 +1,27 @@
+
+def percentile(latencies: List[float], p: float) -> float:
+    if not latencies:
+        return 0.0
+    latencies_sorted = sorted(latencies)
+    k = (len(latencies_sorted) - 1) * (p / 100)
+    f = int(k)
+    c = min(f + 1, len(latencies_sorted) - 1)
+    if f == c:
+        return latencies_sorted[f]
+    d0 = latencies_sorted[f] * (c - k)
+    d1 = latencies_sorted[c] * (k - f)
+    return d0 + d1
+----------------------------------------------------------------------------------------------------------------------------------------
+TL;DR (very simple)
+
+Percentile index sometimes lands between two numbers.
+
+If p90 lands at index 3.6, we:
+
+Take 40% of value at index 3
+
+Take 60% of value at index 4
+
+Add them
+
+That gives a value “between” the two numbers.

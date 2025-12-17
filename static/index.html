@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>API Stress Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    :root {
+      --bg-body: #09090b; /* Zinc 950 */
+      --bg-card: #18181b; /* Zinc 900 */
+      --bg-element: #27272a; /* Zinc 800 */
+      --border: #3f3f46; /* Zinc 700 */
+      
+      --text-primary: #f4f4f5; /* Zinc 100 */
+      --text-secondary: #a1a1aa; /* Zinc 400 */
+      --text-muted: #52525b; /* Zinc 600 */
+
+      --accent: #3b82f6; /* Blue 500 */
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --success: #10b981; /* Emerald 500 */
+      --success-bg: rgba(16, 185, 129, 0.1);
+      --danger: #ef4444; /* Red 500 */
+      --danger-bg: rgba(239, 68, 68, 0.1);
+      
+      --radius: 8px;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-body);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 2rem 1rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* --- Typography --- */
+    h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.025em; }
+    h1 { font-size: 1.75rem; color: white; display: flex; align-items: center; gap: 0.75rem; }
+    h2 { font-size: 1rem; color: var(--text-primary); }
+    
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+    
+    .text-mono { font-family: var(--font-mono); }
+    .small { font-size: 0.875rem; color: var(--text-secondary); }
+
+    /* --- Cards --- */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+     /* --- Badge --- */
+    .verdict-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    
+    .verdict-healthy {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    
+    .verdict-degraded {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+    
+    .verdict-unstable {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }    
+
+    /* --- Forms --- */
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select {
+      width: 100%;
+      background: var(--bg-body);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.6rem 0.8rem;
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 1rem;
+      align-items: end;
+    }
+    
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    /* --- Buttons --- */
+    .btn-group { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+
+    button {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--text-secondary); background: var(--bg-element); }
+    
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+    }
+    .btn-ghost:hover { color: var(--text-primary); background: var(--bg-element); }
+
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* --- Metrics Dashboard --- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .stat-card {
+      background: var(--bg-element);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem; }
+    .stat-value { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+    .stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: auto; padding-top: 0.5rem; }
+
+    /* --- Status Pills --- */
+    .status-pill {
+      display: inline-flex; align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      margin-right: 0.5rem; margin-bottom: 0.5rem;
+    }
+    .status-pill.ok { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+    .status-pill.err { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    /* --- Tables --- */
+    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th { background: var(--bg-element); text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-element); color: var(--text-primary); cursor: pointer; }
+    
+    .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: var(--bg-element); border: 1px solid var(--border); }
+
+    /* --- Collapsible --- */
+    .collapsible-header { cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+    .collapsible-header:hover { opacity: 0.8; }
+    .chevron { transition: transform 0.2s; color: var(--text-secondary); }
+    .collapsible-header.collapsed .chevron { transform: rotate(-90deg); }
+    .collapsible-content.hidden { display: none; }
+
+    /* --- Charts --- */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    @media(max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
+    .chart-box { background: var(--bg-body); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
+    
+    pre { background: var(--bg-body); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto; color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.8rem; }
+
+    /* --- Animations --- */
+    @keyframes pulse-dot { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+    .live-dot { display: inline-block; width: 8px; height: 8px; background: var(--success); border-radius: 50%; margin-right: 8px; animation: pulse-dot 1.5s infinite; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>
+      <div class="logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      API Stress Lab
+    </h1>
+    <div id="live-progress" class="text-mono small" style="color: var(--accent);"></div>
+  </header>
+
+  <section class="card">
+    <div class="panel-header">
+      <h2>New Test Run</h2>
+    </div>
+    
+    <form id="test-form">
+      <div class="form-grid">
+        <div style="grid-column: span 3 / span 3;">
+          <label for="url">Target Endpoint</label>
+          <input id="url" name="url" type="url" required value="https://postman-echo.com/get" placeholder="https://api.example.com/v1/resource" />
+        </div>
+        <div>
+          <label for="method">Method</label>
+          <select id="method" name="method">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+            <option>PATCH</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="label">Label (Optional)</label>
+          <input id="label" name="label" type="text" placeholder="e.g. Smoke test v2" />
+        </div>
+        <div>
+          <label for="requests">Total Req</label>
+          <input id="requests" name="requests" type="number" min="1" max="5000" value="50" />
+        </div>
+        <div>
+          <label for="concurrency">Workers</label>
+          <input id="concurrency" name="concurrency" type="number" min="1" max="200" value="10" />
+        </div>
+        
+        <div class="btn-group" style="grid-column: span 4; margin-top: 0.5rem;">
+          <button type="submit" id="run-btn" class="btn-primary">
+            <span id="btn-spinner" style="display:none;">⏳</span>
+            <span id="btn-label">Start Worker Job</span>
+          </button>
+        
+          <button type="button" id="run-live-btn" class="btn-secondary">
+            <span id="live-btn-spinner" style="display:none;">📡</span>
+            <span id="live-btn-label">Run Live (WebSocket)</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="small" style="margin-top: 1rem; opacity: 0.6;">
+        ℹ️ <strong>Worker Job:</strong> Runs in background (Redis). <strong>Live:</strong> Runs on main thread, streams instantly.
+      </div>
+    </form>
+  </section>
+
+  <section class="card" id="tests-card" style="display:none;">
+    <div class="panel-header collapsible-header" data-target="past-runs">
+      <h2>History</h2>
+      <div style="display:flex; align-items:center; gap:10px;">
+         <button id="refresh-tests-btn" class="btn-ghost" type="button">↻ Refresh</button>
+         <span class="chevron">▼</span>
+      </div>
+    </div>
+    
+    <div id="past-runs" class="collapsible-content">
+      <div class="table-container">
+        <table id="tests-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Target</th>
+              <th>Config</th>
+              <th>Timestamp</th>
+              <th>Label</th>
+            </tr>
+          </thead>
+          <tbody id="tests-body"></tbody>
+        </table>
+        <div id="tests-empty" class="small" style="padding:1rem; text-align:center;">No tests found.</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="results-card" style="display:none;">
+    
+    <section class="card" style="margin-bottom: 1.5rem;">
+        <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <h2>Results Summary</h2>
+            <div id="verdict-badge"></div>
+        </div>
+        <div id="summary"></div>
+    </section>
+
+    <section class="card" style="margin-bottom: 1.5rem;">
+        <div class="panel-header collapsible-header" data-target="live-monitoring">
+            <h2>Live Metrics</h2>
+            <span class="chevron">▼</span>
+        </div>
+        <div id="live-monitoring" class="collapsible-content">
+            <div class="charts-row">
+                <div class="chart-box">
+                    <canvas id="liveLatencyChart" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="liveProgressChart" height="260"></canvas>
+                </div>
+            </div>
+             <div class="charts-row">
+                <div class="chart-box">
+                    <canvas id="liveErrorChart" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="liveRpsChart" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom: 1.5rem;">
+        <div class="panel-header">
+            <h2>Latency Distribution & Status</h2>
+        </div>
+        <div class="charts-row">
+            <div class="chart-box">
+                <canvas id="latencyChart" height="220"></canvas>
+            </div>
+            <div class="chart-box">
+                <canvas id="statusChart" height="220"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="panel-header collapsible-header collapsed" data-target="raw-json">
+            <h2>Raw JSON</h2>
+            <span class="chevron">▼</span>
+        </div>
+        <div id="raw-json" class="collapsible-content hidden">
+            <pre id="json-output"></pre>
+        </div>
+    </section>
+  </div>
+
+</div> <script>
+    // --- Chart Global Config for Dark Mode ---
+    Chart.defaults.color = '#71717a';
+    Chart.defaults.borderColor = '#27272a';
+    Chart.defaults.font.family = "'JetBrains Mono', monospace";
+    
+    const commonChartOptions = {
+        animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        scales: {
+            x: { grid: { color: '#27272a' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: '#27272a' }, beginAtZero: true }
+        },
+        elements: {
+            point: { radius: 0, hitRadius: 10 },
+            line: { borderWidth: 2, tension: 0.2 }
+        }
+    };
+
+    const form = document.getElementById("test-form");
+    const runBtn = document.getElementById("run-btn");
+    const btnLabel = document.getElementById("btn-label");
+    const btnSpinner = document.getElementById("btn-spinner");
+
+    const runLiveBtn = document.getElementById("run-live-btn");
+    const liveBtnLabel = document.getElementById("live-btn-label");
+    const liveBtnSpinner = document.getElementById("live-btn-spinner");
+    const liveProgress = document.getElementById("live-progress");
+
+    const resultsCard = document.getElementById("results-card");
+    const summaryDiv = document.getElementById("summary");
+    const jsonOutput = document.getElementById("json-output");
+
+    const testsCard = document.getElementById("tests-card");
+    const testsTable = document.getElementById("tests-table");
+    const testsBody = document.getElementById("tests-body");
+    const testsEmpty = document.getElementById("tests-empty");
+    const refreshTestsBtn = document.getElementById("refresh-tests-btn");
+
+    let isRunning = false;
+
+    // Chart instances
+    let statusChart, latencyChart, liveLatencyChart, liveProgressChart, liveErrorChart, liveRpsChart;
+    
+    // Data Buffers
+    let latencyData = [], progressData = [], timeLabels = [], errorRateData = [], rpsData = [];
+    let latencyBuffer = [], completedBuffer = [], errorBuffer = [], timestampBuffer = [];
+
+    let chartUpdateTimer = null;
+    const CHART_UPDATE_INTERVAL_MS = 250;
+    const ROLLING_WINDOW = 5;
+
+    function rollingAverage(arr, windowSize) {
+      const slice = arr.slice(-windowSize);
+      return slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : 0;
+    }
+
+    function autoScaleY(chart, paddingRatio = 0.15) {
+      const data = chart.data.datasets[0].data;
+      if (!data.length) return;
+    
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      const padding = (max - min) * paddingRatio || 1;
+    
+      chart.options.scales.y.min = Math.max(0, min - padding);
+      chart.options.scales.y.max = max + padding;
+    }
+    
+    function setRunningState(running, mode = "normal") {
+      isRunning = running;
+      runBtn.disabled = running;
+      runLiveBtn.disabled = running;
+
+      if (running) {
+        liveProgress.innerHTML = `<span class="live-dot"></span> Test Running...`;
+      } else {
+        liveProgress.textContent = "";
+      }
+  
+      btnSpinner.style.display = running && mode === "normal" ? "inline" : "none";
+      btnLabel.textContent = running && mode === "normal" ? "Running..." : "Start Worker Job";
+    
+      liveBtnSpinner.style.display = running && mode === "live" ? "inline" : "none";
+      liveBtnLabel.textContent = running && mode === "live" ? "Running..." : "Run Live (WebSocket)";
+    }
+
+    // --- CHART INITIALIZATION ---
+    function initLiveCharts() {
+      latencyData = []; progressData = []; timeLabels = []; errorRateData = []; rpsData = [];
+      latencyBuffer = []; completedBuffer = []; errorBuffer = []; timestampBuffer = [];
+
+      const createLineChart = (id, label, color) => {
+          const ctx = document.getElementById(id)?.getContext("2d");
+          if(!ctx) return null;
+          
+          // Gradient fill
+          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+          gradient.addColorStop(0, color.replace('1)', '0.2)')); 
+          gradient.addColorStop(1, color.replace('1)', '0)'));
+
+          return new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: timeLabels,
+              datasets: [{
+                label: label,
+                data: [],
+                borderColor: color,
+                backgroundColor: gradient,
+                fill: true,
+                borderWidth: 2
+              }]
+            },
+            options: {
+                ...commonChartOptions,
+                plugins: { 
+                    title: { display: true, text: label, align: 'start', color: '#a1a1aa', font: { size: 12, weight: 'normal' } } 
+                }
+            }
+          });
+      };
+
+      if (liveLatencyChart) liveLatencyChart.destroy();
+      liveLatencyChart = createLineChart("liveLatencyChart", "Latency (ms)", "rgba(59, 130, 246, 1)"); // Blue
+
+      if (liveProgressChart) liveProgressChart.destroy();
+      liveProgressChart = createLineChart("liveProgressChart", "Completed Requests", "rgba(16, 185, 129, 1)"); // Emerald
+
+      if (liveErrorChart) liveErrorChart.destroy();
+      liveErrorChart = createLineChart("liveErrorChart", "Error Rate (%)", "rgba(239, 68, 68, 1)"); // Red
+
+      if (liveRpsChart) liveRpsChart.destroy();
+      liveRpsChart = createLineChart("liveRpsChart", "Requests/Sec (RPS)", "rgba(245, 158, 11, 1)"); // Amber
+    }
+
+    function updateLatencyChart(lat) {
+      const ctx = document.getElementById("latencyChart");
+      if (!ctx) return;
+      
+      const labels = ["avg", "p50", "p90", "p95", "p99"];
+      const values = [lat.avg ?? 0, lat.p50 ?? 0, lat.p90 ?? 0, lat.p95 ?? 0, lat.p99 ?? 0];
+
+      if (latencyChart) {
+        latencyChart.data.datasets[0].data = values;
+        latencyChart.update();
+        return;
+      }
+
+      latencyChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ label: "Latency (ms)", data: values, backgroundColor: "#3b82f6", borderRadius: 4 }]
+        },
+        options: { ...commonChartOptions }
+      });
+    }
+
+    function updateStatusChart(statusCodes) {
+      const ctx = document.getElementById("statusChart");
+      if (!ctx) return;
+    
+      const labels = Object.keys(statusCodes);
+      const values = Object.values(statusCodes);
+      const colors = labels.map(c => c.startsWith('2') ? '#10b981' : (c.startsWith('5') ? '#ef4444' : '#f59e0b'));
+
+      if (statusChart) {
+          statusChart.destroy(); // Easier to destroy/recreate for bar charts with variable labels
+      }
+
+      statusChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ label: "Count", data: values, backgroundColor: colors, borderRadius: 4 }]
+        },
+        options: { ...commonChartOptions }
+      });
+    }
+
+    // --- CHART UPDATES ---
+    function startChartUpdates() {
+      stopChartUpdates();
+      chartUpdateTimer = setInterval(() => {
+        if (!latencyBuffer.length || !completedBuffer.length) return;
+    
+        const nowLabel = new Date().toLocaleTimeString().split(' ')[0]; // HH:MM:SS
+        const smoothedLatency = rollingAverage(latencyBuffer, ROLLING_WINDOW);
+        const latestCompleted = completedBuffer[completedBuffer.length - 1];
+        
+        // Error Rate
+        const latestErrors = errorBuffer[errorBuffer.length - 1] ?? 0;
+        const errorRate = latestCompleted > 0 ? (latestErrors / latestCompleted) * 100 : 0;
+
+        // RPS
+        let rps = 0;
+        if (timestampBuffer.length >= 2) {
+            const dt = timestampBuffer[timestampBuffer.length - 1] - timestampBuffer[timestampBuffer.length - 2];
+            const dc = completedBuffer[completedBuffer.length - 1] - completedBuffer[completedBuffer.length - 2];
+            if (dt > 0) rps = dc / dt;
+        }
+
+        timeLabels.push(nowLabel);
+        liveLatencyChart.data.datasets[0].data.push(smoothedLatency);
+        liveProgressChart.data.datasets[0].data.push(latestCompleted);
+        liveErrorChart.data.datasets[0].data.push(errorRate);
+        liveRpsChart.data.datasets[0].data.push(rps);
+
+        // Keep buffer size handy
+        if (timeLabels.length > 50) {
+            timeLabels.shift();
+            liveLatencyChart.data.datasets[0].data.shift();
+            liveProgressChart.data.datasets[0].data.shift();
+            liveErrorChart.data.datasets[0].data.shift();
+            liveRpsChart.data.datasets[0].data.shift();
+        }
+
+        liveLatencyChart.update("none");
+        liveProgressChart.update("none");
+        liveErrorChart.update("none");
+        liveRpsChart.update("none");
+
+        autoScaleY(liveLatencyChart);
+        autoScaleY(liveErrorChart);
+        autoScaleY(liveRpsChart);
+
+      }, CHART_UPDATE_INTERVAL_MS);
+    }
+
+    function stopChartUpdates() {
+      if (chartUpdateTimer) { clearInterval(chartUpdateTimer); chartUpdateTimer = null; }
+    }
+
+    function replayTimeSeries(timeseries) {
+        if (!timeseries || timeseries.length === 0) return;
+        initLiveCharts();
+        stopChartUpdates();
+
+        let prev = null;
+        timeseries.forEach(point => {
+            timeLabels.push(new Date(point.timestamp * 1000).toLocaleTimeString().split(' ')[0]);
+            liveLatencyChart.data.datasets[0].data.push(point.avg_latency_ms ?? 0);
+            liveProgressChart.data.datasets[0].data.push(point.completed ?? 0);
+            
+            const errRate = point.completed > 0 ? (point.errors/point.completed)*100 : 0;
+            liveErrorChart.data.datasets[0].data.push(errRate);
+
+            let rps = 0;
+            if(prev) {
+                 const dt = point.timestamp - prev.timestamp;
+                 const dc = point.completed - prev.completed;
+                 if(dt > 0) rps = dc/dt;
+            }
+            liveRpsChart.data.datasets[0].data.push(rps);
+            prev = point;
+        });
+        
+        liveLatencyChart.update();
+        liveProgressChart.update();
+        liveErrorChart.update();
+        liveRpsChart.update();
+    }
+
+    // --- FORM & EVENTS ---
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const url = document.getElementById("url").value;
+      const method = document.getElementById("method").value;
+      const totalRequests = parseInt(document.getElementById("requests").value, 10);
+      const concurrency = parseInt(document.getElementById("concurrency").value, 10);
+      const label = document.getElementById("label").value;
+
+      if (!url || isRunning) return;
+      
+      setRunningState(true, "normal");
+      initLiveCharts();
+      startChartUpdates();
+      resultsCard.style.display = "block";
+      summaryDiv.innerHTML = `<div class="text-mono small" style="padding:1rem;">🚀 Job queued. Waiting for worker...</div>`;
+
+      try {
+        const resp = await fetch("/run-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, method, total_requests: totalRequests, concurrency, label }),
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const data = await resp.json();
+        
+        subscribeToRun(data.id);
+        loadTests(); // Update history immediately
+      } catch (err) {
+        summaryDiv.innerHTML = `<p style="color:var(--danger);">Error: ${err.message}</p>`;
+        setRunningState(false);
+      }
+    });
+
+    runLiveBtn.addEventListener("click", () => {
+       const url = document.getElementById("url").value;
+       const method = document.getElementById("method").value;
+       const requests = parseInt(document.getElementById("requests").value, 10);
+       const concurrency = parseInt(document.getElementById("concurrency").value, 10);
+       const label = document.getElementById("label").value;
+
+       if(!url || isRunning) return;
+
+       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+       const ws = new WebSocket(`${protocol}://${window.location.host}/ws/live-test`);
+       
+       setRunningState(true, "live");
+       initLiveCharts();
+       startChartUpdates();
+       resultsCard.style.display = "block";
+
+       ws.onopen = () => {
+           ws.send(JSON.stringify({ url, method, total_requests: requests, concurrency, label }));
+           summaryDiv.innerHTML = `<div class="text-mono small" style="padding:1rem;">📡 Live Stream Connected...</div>`;
+       };
+
+       ws.onmessage = (evt) => {
+           const data = JSON.parse(evt.data);
+           if(data.type === "progress") handleLiveProgress(data);
+           else if(data.type === "done") {
+               setRunningState(false);
+               stopChartUpdates();
+               renderResult({ metrics: data.metrics, url, method, total_requests: requests, concurrency });
+               loadTests();
+               ws.close();
+           } else if (data.type === "error") {
+               alert(data.message);
+               setRunningState(false);
+           }
+       };
+       ws.onclose = () => setRunningState(false);
+    });
+
+    function handleLiveProgress(payload) {
+        if (!payload.timestamp) return;
+        latencyBuffer.push(payload.avg_latency_ms ?? 0);
+        completedBuffer.push(payload.completed ?? 0);
+        errorBuffer.push(payload.errors ?? 0);
+        timestampBuffer.push(payload.timestamp);
+        
+        liveProgress.innerHTML = `<span class="live-dot"></span> ${payload.completed} / ${payload.total}`;
+    }
+
+    function subscribeToRun(runId) {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/run/${runId}`);
+        
+        ws.onopen = () => console.log("Subscribed to run", runId);
+        ws.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if(data.type === "snapshot" && data.metrics) { /* Sync logic if needed */ }
+                else if(data.type === "progress") handleLiveProgress(data);
+                else if(data.type === "done") {
+                    setRunningState(false);
+                    stopChartUpdates();
+                    loadTestDetail(data.run_id);
+                    loadTests();
+                    ws.close();
+                }
+            } catch(err) { console.error(err); }
+        };
+    }
+
+    // --- VERDICT RESULTS ---
+    function computeVerdict(summary) {
+      const transport = summary.transport_errors ?? 0;
+      const failed = summary.failed_requests ?? 0;
+    
+      if (transport > 0) {
+        return {
+          label: "Unstable",
+          class: "verdict-unstable",
+          reason: "Network / transport errors detected"
+        };
+      }
+    
+      if (failed > 0) {
+        return {
+          label: "Degraded",
+          class: "verdict-degraded",
+          reason: "API responded with errors under load"
+        };
+      }
+    
+      return {
+        label: "Healthy",
+        class: "verdict-healthy",
+        reason: "All requests completed successfully"
+      };
+    }
+    
+    // --- RENDERING RESULTS ---
+    function renderResult(data) {
+        const summary = data.metrics.summary ?? data.metrics;
+        const verdict = computeVerdict(summary);
+        const config = data.config || data; // fallback
+        const transportErrors = summary.transport_errors ?? 0;
+        
+        resultsCard.style.display = "block";
+        const lat = summary.latency_ms || {};
+        const statusCodes = summary.status_codes || {};
+
+        // Generate Status Pills
+        const statusHtml = Object.entries(statusCodes).map(([code, count]) => {
+            const type = (code >= 200 && code < 400) ? 'ok' : 'err';
+            return `<div class="status-pill ${type}">${code}: ${count}</div>`;
+        }).join('');
+
+        // Verdict Badge
+        const verdictEl = document.getElementById("verdict-badge");
+        if (verdictEl) {
+          verdictEl.innerHTML = `
+            <div class="verdict-badge ${verdict.class}" title="${verdict.reason}">
+              ${verdict.label}
+            </div>
+          `;
+        }
+
+        summaryDiv.innerHTML = `
+            <div class="metrics-grid">
+                <div class="stat-card">
+                    <div class="stat-label">RPS</div>
+                    <div class="stat-value" style="color:var(--accent);">${(summary.requests_per_second||0).toFixed(1)}</div>
+                    <div class="stat-sub">Req/Sec</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Latency</div>
+                    <div class="stat-value">${(lat.avg||0).toFixed(0)}<span style="font-size:0.8em;color:var(--text-secondary);">ms</span></div>
+                    <div class="stat-sub">P99: ${(lat.p99||0).toFixed(0)}ms</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Request Outcomes</div>
+                      <div class="stat-value" style="color:var(--success);">
+                          ${summary.successful_requests}
+                      </div>
+                      <div class="stat-sub">
+                          HTTP Failed: <span style="color:var(--danger)">${summary.failed_requests}</span>
+                          ${transportErrors > 0 
+                              ? `<br/>Transport Errors: <span style="color:var(--danger)">${transportErrors}</span>` 
+                              : ``}
+                      </div>
+                  </div>
+                 <div class="stat-card">
+                    <div class="stat-label">Total Time</div>
+                    <div class="stat-value">${(summary.total_time_seconds||0).toFixed(2)}s</div>
+                    <div class="stat-sub">${config.total_requests} Req @ ${config.concurrency} Concurrency</div>
+                </div>
+            </div>
+            <div style="margin-top:1.5rem;">
+                <div class="stat-label" style="margin-bottom:0.5rem;">Response Codes</div>
+                ${statusHtml || '<span class="small">No responses recorded.</span>'}
+            </div>
+            ${transportErrors > 0 ? `
+            <div class="small" style="margin-top:0.75rem;color:var(--danger);">
+                ⚠️ ${transportErrors} request(s) failed due to network / timeout issues and did not receive an HTTP response.
+            </div>
+        ` : ``}
+
+        `;
+        
+        updateLatencyChart(lat);
+        updateStatusChart(statusCodes);
+        jsonOutput.textContent = JSON.stringify(data, null, 2);
+    }
+
+    // --- PAST RUNS ---
+    refreshTestsBtn.addEventListener("click", loadTests);
+    
+    async function loadTests() {
+        try {
+            const res = await fetch("/tests");
+            const runs = await res.json();
+            renderTests(runs);
+        } catch(e) { console.error(e); }
+    }
+
+    function renderTests(tests) {
+        testsCard.style.display = "block";
+        if(!tests.length) { testsTable.style.display="none"; testsEmpty.style.display="block"; return; }
+        
+        testsEmpty.style.display="none";
+        testsTable.style.display="table";
+        testsBody.innerHTML = tests.map(t => `
+            <tr onclick="loadTestDetail(${t.id})">
+                <td class="text-mono" style="color:var(--accent);">#${t.id}</td>
+                <td><div style="font-weight:500;">${t.url}</div><div class="small badge" style="display:inline-block;margin-top:4px;">${t.method}</div></td>
+                <td><div class="small">${t.total_requests} reqs</div><div class="small text-muted">${t.concurrency} workers</div></td>
+                <td class="text-mono small">${new Date(t.created_at).toLocaleString()}</td>
+                <td>${t.label ? `<span class="badge">${t.label}</span>` : '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadTestDetail(id) {
+        try {
+            const res = await fetch(`/tests/${id}`);
+            const data = await res.json();
+            renderResult(data);
+            if(data.metrics.timeseries) replayTimeSeries(data.metrics.timeseries);
+        } catch(e) { console.error(e); }
+    }
+
+    // Collapsible Logic
+    document.querySelectorAll('.collapsible-header').forEach(h => {
+        h.addEventListener('click', () => {
+            h.classList.toggle('collapsed');
+            const target = document.getElementById(h.dataset.target);
+            if(target) target.classList.toggle('hidden');
+        });
+    });
+
+    // Init
+    loadTests();
+</script>
+</body>
+</html>
